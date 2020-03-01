@@ -9,7 +9,13 @@ class NearEarthObject(object):
         """
         :param kwargs:    dict of attributes about a given Near Earth Object, only a subset of attributes used
         """
-        # TODO: What instance variables will be useful for storing on the Near Earth Object?
+
+        self.orbits = []
+        self.id = kwargs.get('id', None)
+        self.name = kwargs.get('name', 'Name not Found')
+        self.min_diam_km = float(kwargs.get('estimated_diameter_min_kilometers', 0))
+        self.is_hazardous = kwargs.get('is_potentially_hazardous_asteroid', False)
+
 
     def update_orbits(self, orbit):
         """
@@ -20,6 +26,13 @@ class NearEarthObject(object):
         """
 
         # TODO: How do we connect orbits back to the Near Earth Object?
+
+        self.orbits.append(orbit)
+
+     def __repr__(self):
+        return f'Object id {self.id} with name {self.name} \
+                                    orbits: {[orbit.name for orbit in self.orbits]} \
+                                    with orbit_dates:{[orbit.close_approach_date for orbit in self.orbits]}'
 
 
 class OrbitPath(object):
@@ -33,4 +46,11 @@ class OrbitPath(object):
         """
         :param kwargs:    dict of attributes about a given orbit, only a subset of attributes used
         """
-        # TODO: What instance variables will be useful for storing on the Near Earth Object?
+        # Instance variables are used for storing on the Near Earth Object!
+        self.name = kwargs.get('name', 'no name')
+        self.miss_distance_kilometers = float(kwargs.get('miss_distance_kilometers', 0))
+        self.close_approach_date = kwargs.get('close_approach_date', None)
+
+    def __repr__(self):
+        return f'Object {self.name} missed earth on {self.close_approach_date} \
+                                    by {self.miss_distance_kilometers} kms'
