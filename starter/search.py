@@ -1,8 +1,11 @@
 from collections import namedtuple
 from enum import Enum
 
-from exceptions import UnsupportedFeature
-from models import NearEarthObject, OrbitPath
+from .exceptions import UnsupportedFeature
+from .models import NearEarthObject, OrbitPath
+
+import operator
+from collections import defaultdict
 
 
 class DateSearch(Enum):
@@ -36,6 +39,14 @@ class Query(object):
         """
         # TODO: What instance variables will be useful for storing on the Query object?
 
+        self.return_object = kwargs.get('return_object')
+        self.date = kwargs.get('date')
+        self.start_date = kwargs.get('start_date')
+        self.end_date = kwargs.get('end_date')        
+        self.number = kwargs.get('number')
+        self.filter = kwargs.get('filter')
+        
+
     def build_query(self):
         """
         Transforms the provided query options, set upon initialization, into a set of Selectors that the NEOSearcher
@@ -44,7 +55,28 @@ class Query(object):
         :return: QueryBuild.Selectors namedtuple that translates the dict of query options into a SearchOperation
         """
 
-        # TODO: Translate the query parameters into a QueryBuild.Selectors object
+        if self.date:
+            date_search = Query.DateSearch(DateSearch.equals, self.date)
+        else:
+            date_search = Query.DateSearch(DateSearch.between, [
+                self.start_date, self.end_date])
+
+        return_object = Query.ReturnObjects.get(self.return_object)
+
+        # Initialize filters to None for case of no filters
+        filters=[]
+
+        if self.filter:
+            # Create Filter Object if filter is enabled
+            options = Filter.create_filter_options(self.filter)
+
+            for key, val in options.items():
+                for each_filter in val:
+                    filter_properties = each_filter.split(":")
+                    # Append each filter
+                    filters.append(Filter(filter_properties[0], key, filter_properties[1], filter_properties[2]))
+
+        return Query.Selectors(date_search, self.number, filters, return_object)
 
 
 class Filter(object):
@@ -53,11 +85,20 @@ class Filter(object):
     Each filter is one of Filter.Operators provided with a field to filter on a value.
     """
     Options = {
-        # TODO: Create a dict of filter name to the NearEarthObject or OrbitalPath property
+        # Create a dict of filter name to the NearEarthObject or OrbitalPath property
+        'diameter': 'diameter_min_km',
+        'distance': 'miss_distance_kilometers',
+        'is_hazardous': 'is_potentially_hazardous_asteroid'
     }
 
     Operators = {
-        # TODO: Create a dict of operator symbol to an Operators method, see README Task 3 for hint
+        #Create a dict of operator symbol to an Operators method, see README Task 3 for hint
+
+        "=": operator.eq,
+        ">": operator.gt,
+        ">=": operator.ge,
+        "<": operator.lt,
+        "<=": operator.le
     }
 
     def __init__(self, field, object, operation, value):
@@ -82,6 +123,19 @@ class Filter(object):
         """
 
         # TODO: return a defaultdict of filters with key of NearEarthObject or OrbitPath and value of empty list or list of Filters
+        filter_dict = defaultdict(list)
+
+        for each_filter in filter_options:
+            filter_name = each_filter.split(':')[0]            
+
+            if hasattr(NearEarthObject(), Filter.Options.get(filter_name)):
+                filter_dict['NearEarthObject'].append(each_filter)
+
+            elif hasattr(OrbitPath(), Filter.Options.get(filter_name)):
+                filter_dict['OrbitPath'].append(each_filter)
+
+        return filter_dict
+
 
     def apply(self, results):
         """
@@ -91,6 +145,23 @@ class Filter(object):
         :return: filtered list of Near Earth Object results
         """
         # TODO: Takes a list of NearEarthObjects and applies the value of its filter operation to the results
+
+
+        filtered_neos = []
+
+        for neo in results:
+            operation = Filter.Operators.get(self.operation)
+            field = Filter.Options.get(self.field)
+            value = getattr(neo, field)
+
+            try:
+                if operation(value, self.value):
+                    filtered_neos.append(neo)
+            except:
+                if operation(str(value), str(self.value)):
+                    filtered_neos.append(neo)
+
+        return filtered_neos
 
 
 class NEOSearcher(object):
@@ -105,20 +176,58 @@ class NEOSearcher(object):
         :param db: NEODatabase holding the NearEarthObject instances and their OrbitPath instances
         """
         self.db = db
-        # TODO: What kind of an instance variable can we use to connect DateSearch to how we do search?
+        # Instance variable can we use to connect DateSearch 
+        self.obj_date = dict(db.obj_date)
+        self.obj_name = dict(db.obj_name)
+        self.date_search = None
 
     def get_objects(self, query):
-        """
-        Generic search interface that, depending on the details in the QueryBuilder (query) calls the
-        appropriate instance search function, then applys any filters, with distance as the last filter.
+   
+        #Date Search Filter
 
-        Once any filters provided are applied, return the number of requested objects in the query.return_object
-        specified.
+        self.date_search = query.date_search.type
+        dates = query.date_search.values
+        
+        neos = []
 
-        :param query: Query.Selectors object with query information
-        :return: Dataset of NearEarthObjects or OrbitalPaths
-        """
-        # TODO: This is a generic method that will need to understand, using DateSearch, how to implement search
-        # TODO: Write instance methods that get_objects can use to implement the two types of DateSearch your project
-        # TODO: needs to support that then your filters can be applied to. Remember to return the number specified in
-        # TODO: the Query.Selectors as well as in the return_type from Query.Selectors
+        for key, value in self.obj_date.items():
+            
+            if self.date_search == DateSearch.equals:            
+                if key == dates:
+                    neos.extend(value)
+
+            elif self.date_search == DateSearch.between:
+                if key >= dates[0] and key <= dates[1]:
+                    neos.extend(value)
+
+        # Distance Filter
+
+        distance_filter = None
+        orbits = []
+
+        for each_filter in query.filters:
+
+            if each_filter.field == 'distance':
+                distance_filter = each_filter
+                continue
+
+            neos = each_filter.apply(neos)
+        
+        for neo in neos:
+            orbits.extend(neo.orbits)
+
+
+        filtered_orbits = orbits
+        filtered_neos = neos
+
+        if distance_filter:
+            filtered_orbits = distance_filter.apply(orbits)
+            filtered_neos = [self.obj_name.get(orbit.neo_name) for orbit in filtered_orbits]
+
+        filtered_neos = list(set(filtered_neos))
+        filtered_orbits = list(set(filtered_orbits))
+
+        if query.return_object == OrbitPath:
+            return filtered_orbits[: int(query.number)]
+
+        return filtered_neos[: int(query.number)]

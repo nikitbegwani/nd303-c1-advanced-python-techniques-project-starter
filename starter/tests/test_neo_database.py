@@ -1,8 +1,8 @@
 import pathlib
 import unittest
 
-from database import NEODatabase
-from search import Query, NEOSearcher
+from ..database import NEODatabase
+from ..search import Query, NEOSearcher
 
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.parent

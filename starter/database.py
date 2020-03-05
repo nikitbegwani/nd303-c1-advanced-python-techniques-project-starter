@@ -1,4 +1,4 @@
-from models import OrbitPath, NearEarthObject
+from .models import OrbitPath, NearEarthObject
 import csv
 
 
@@ -21,7 +21,7 @@ class NEODatabase(object):
         self.filename = filename
         
         self.obj_name = {}
-        self.obj.date = {}
+        self.obj_date = {}
 
 
     def load_data(self, filename=None):
