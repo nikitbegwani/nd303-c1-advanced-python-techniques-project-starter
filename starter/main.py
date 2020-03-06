@@ -33,10 +33,10 @@ import pathlib
 import sys
 from datetime import datetime
 
-from .exceptions import UnsupportedFeature
-from .database import NEODatabase
-from .search import Query, NEOSearcher
-from .writer import OutputFormat, NEOWriter
+from exceptions import UnsupportedFeature
+from database import NEODatabase
+from search import Query, NEOSearcher
+from writer import OutputFormat, NEOWriter
 
 PROJECT_ROOT = pathlib.Path(__file__).parent.absolute()
 

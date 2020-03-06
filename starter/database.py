@@ -1,4 +1,4 @@
-from .models import OrbitPath, NearEarthObject
+from models import OrbitPath, NearEarthObject
 import csv
 
 

@@ -1,8 +1,8 @@
 from collections import namedtuple
 from enum import Enum
 
-from .exceptions import UnsupportedFeature
-from .models import NearEarthObject, OrbitPath
+from exceptions import UnsupportedFeature
+from models import NearEarthObject, OrbitPath
 
 import operator
 from collections import defaultdict
@@ -126,7 +126,7 @@ class Filter(object):
         filter_dict = defaultdict(list)
 
         for each_filter in filter_options:
-            filter_name = each_filter.split(':')[0]            
+            filter_name = each_filter.split(':')[0]  
 
             if hasattr(NearEarthObject(), Filter.Options.get(filter_name)):
                 filter_dict['NearEarthObject'].append(each_filter)
