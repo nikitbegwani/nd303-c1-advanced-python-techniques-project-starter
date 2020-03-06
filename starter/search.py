@@ -150,8 +150,9 @@ class Filter(object):
         filtered_neos = []
 
         for neo in results:
-            operation = Filter.Operators.get(self.operation)
+            
             field = Filter.Options.get(self.field)
+            operation = Filter.Operators.get(self.operation)
             value = getattr(neo, field)
 
             try:
@@ -227,7 +228,9 @@ class NEOSearcher(object):
         filtered_neos = list(set(filtered_neos))
         filtered_orbits = list(set(filtered_orbits))
 
-        if query.return_object == OrbitPath:
-            return filtered_orbits[: int(query.number)]
+        filter_number = int(query.number)
 
-        return filtered_neos[: int(query.number)]
+        if query.return_object == OrbitPath:
+            return filtered_orbits[:filter_number ]
+
+        return filtered_neos[: filter_number]
